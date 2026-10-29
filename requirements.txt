@@ -1,0 +1,7 @@
+# Python 3.12 baseline. Add dependencies only when a module is implemented.
+streamlit>=1.40,<2
+python-dotenv>=1.0,<2
+pydantic-settings>=2.5,<3
+pytest>=8,<9
+SQLAlchemy>=2.0,<3
+PyMySQL>=1.1,<2
