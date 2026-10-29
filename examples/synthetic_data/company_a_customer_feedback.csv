@@ -1,0 +1,5 @@
+contact_ref,survey_rating,handle_time_seconds,customer_comment
+A-001,5,380,"Helpful support"
+A-002,4,420,"Wait was longer than expected"
+A-003,3,510,"Issue partly resolved"
+A-004,5,360,"Clear explanation"
