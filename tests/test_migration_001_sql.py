@@ -16,7 +16,7 @@ def _sql_without_comments(path: Path) -> str:
 
 def test_migration_targets_expected_schema_and_creates_eight_core_tables() -> None:
     sql = _sql_without_comments(MIGRATION)
-    assert re.search(r"\bUSE\s+`?db_Airlines`?\s*;", sql, re.IGNORECASE)
+    assert re.search(r"\bUSE\s+`?db_airlines`?\s*;", sql, re.IGNORECASE)
 
     tables = re.findall(r"CREATE\s+TABLE\s+`(\w+)`", sql, re.IGNORECASE)
     assert tables == [
