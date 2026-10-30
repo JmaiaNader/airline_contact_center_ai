@@ -1,0 +1,222 @@
+﻿table,column,type,status,suggested_concept,fit_score,type_compatible,rationale
+audit_events,audit_event_id,integer,unmapped,,,,No catalog match
+audit_events,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+audit_events,actor_membership_id,integer,unmapped,,,,No catalog match
+audit_events,action_code,text,unmapped,,,,No catalog match
+audit_events,target_type,text,unmapped,,,,No catalog match
+audit_events,target_reference,text,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'text' is compatible with the catalog expectation.
+audit_events,outcome_code,text,unmapped,,,,No catalog match
+audit_events,event_details_json,text,unmapped,,,,No catalog match
+audit_events,occurred_at_utc,datetime,unmapped,,,,No catalog match
+bookings,booking_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+bookings,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+bookings,booking_reference,text,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'text' is compatible with the catalog expectation.
+bookings,booking_status,text,unmapped,,,,No catalog match
+bookings,scheduled_departure_utc,datetime,unmapped,,,,No catalog match
+bookings,origin_airport_code,text,unmapped,,,,No catalog match
+bookings,destination_airport_code,text,unmapped,,,,No catalog match
+bookings,created_at_utc,datetime,unmapped,,,,No catalog match
+bookings,updated_at_utc,datetime,unmapped,,,,No catalog match
+channels,channel_code,text,unmapped,,,,No catalog match
+channels,display_name,text,unmapped,,,,No catalog match
+channels,is_synchronous,integer,unmapped,,,,No catalog match
+channels,is_active,integer,unmapped,,,,No catalog match
+channels,created_at_utc,datetime,unmapped,,,,No catalog match
+channels,updated_at_utc,datetime,unmapped,,,,No catalog match
+contact_interactions,interaction_id,integer,suggested,contact_reference,0.94,true,Source field exactly matches a governed alias. | Observed type 'integer' is compatible with the catalog expectation.
+contact_interactions,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+contact_interactions,conversation_reference,text,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'text' is compatible with the catalog expectation.
+contact_interactions,queue_leg_number,integer,unmapped,,,,No catalog match
+contact_interactions,market_code,text,unmapped,,,,No catalog match
+contact_interactions,channel_code,text,unmapped,,,,No catalog match
+contact_interactions,queue_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+contact_interactions,service_language_code,text,unmapped,,,,No catalog match
+contact_interactions,booking_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+contact_interactions,offered_at_utc,datetime,unmapped,,,,No catalog match
+contact_interactions,answered_at_utc,datetime,unmapped,,,,No catalog match
+contact_interactions,ended_at_utc,datetime,unmapped,,,,No catalog match
+contact_interactions,abandoned_at_utc,datetime,unmapped,,,,No catalog match
+contact_interactions,talk_seconds,integer,suggested,average_handle_time_seconds,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+contact_interactions,hold_seconds,integer,suggested,average_handle_time_seconds,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+contact_interactions,after_contact_work_seconds,integer,unmapped,,,,No catalog match
+contact_interactions,created_at_utc,datetime,unmapped,,,,No catalog match
+historical_interval_metrics,historical_interval_metric_id,integer,unmapped,,,,No catalog match
+historical_interval_metrics,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,source_system_id,integer,unmapped,,,,No catalog match
+historical_interval_metrics,ingestion_batch_id,integer,unmapped,,,,No catalog match
+historical_interval_metrics,source_row_number,integer,unmapped,,,,No catalog match
+historical_interval_metrics,interval_start_utc,datetime,unmapped,,,,No catalog match
+historical_interval_metrics,interval_seconds,integer,suggested,average_handle_time_seconds,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,market_code,text,unmapped,,,,No catalog match
+historical_interval_metrics,channel_code,text,unmapped,,,,No catalog match
+historical_interval_metrics,service_code,text,unmapped,,,,No catalog match
+historical_interval_metrics,queue_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,service_language_code,text,unmapped,,,,No catalog match
+historical_interval_metrics,offered_contacts,integer,suggested,offered_contacts,0.98,true,Source field exactly matches the canonical concept key. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,answered_contacts,integer,ambiguous,handled_contacts,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,handled_contacts,integer,suggested,handled_contacts,0.98,true,Source field exactly matches the canonical concept key. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,abandoned_contacts,integer,ambiguous,handled_contacts,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,sla_eligible_contacts,integer,unmapped,,,,No catalog match
+historical_interval_metrics,answered_within_threshold_contacts,integer,suggested,service_level_pct,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,total_handle_seconds,integer,suggested,average_handle_time_seconds,0.69,true,Partial token overlap (67%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+historical_interval_metrics,total_answer_wait_seconds,integer,unmapped,,,,No catalog match
+historical_interval_metrics,source_reported_aht_seconds,number,suggested,average_handle_time_seconds,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'number' is compatible with the catalog expectation.
+historical_interval_metrics,source_reported_asa_seconds,number,unmapped,,,,No catalog match
+historical_interval_metrics,source_reported_sla_percent,number,unmapped,,,,No catalog match
+historical_interval_metrics,quality_status,text,unmapped,,,,No catalog match
+historical_interval_metrics,quality_notes_json,text,unmapped,,,,No catalog match
+historical_interval_metrics,created_at_utc,datetime,unmapped,,,,No catalog match
+ingestion_batches,ingestion_batch_id,integer,unmapped,,,,No catalog match
+ingestion_batches,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+ingestion_batches,source_system_id,integer,unmapped,,,,No catalog match
+ingestion_batches,batch_type,text,unmapped,,,,No catalog match
+ingestion_batches,source_file_name,text,unmapped,,,,No catalog match
+ingestion_batches,source_content_sha256,text,unmapped,,,,No catalog match
+ingestion_batches,batch_status,text,unmapped,,,,No catalog match
+ingestion_batches,records_received,integer,unmapped,,,,No catalog match
+ingestion_batches,records_accepted,integer,unmapped,,,,No catalog match
+ingestion_batches,records_rejected,integer,unmapped,,,,No catalog match
+ingestion_batches,validation_summary_json,text,unmapped,,,,No catalog match
+ingestion_batches,received_at_utc,datetime,unmapped,,,,No catalog match
+ingestion_batches,completed_at_utc,datetime,unmapped,,,,No catalog match
+languages,language_code,text,unmapped,,,,No catalog match
+languages,display_name,text,unmapped,,,,No catalog match
+languages,is_active,integer,unmapped,,,,No catalog match
+languages,created_at_utc,datetime,unmapped,,,,No catalog match
+languages,updated_at_utc,datetime,unmapped,,,,No catalog match
+markets,market_code,text,unmapped,,,,No catalog match
+markets,market_name,text,unmapped,,,,No catalog match
+markets,country_code,text,unmapped,,,,No catalog match
+markets,reporting_timezone,text,unmapped,,,,No catalog match
+markets,is_active,integer,unmapped,,,,No catalog match
+markets,created_at_utc,datetime,unmapped,,,,No catalog match
+markets,updated_at_utc,datetime,unmapped,,,,No catalog match
+membership_roles,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+membership_roles,membership_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+membership_roles,role_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+membership_roles,assigned_by_membership_id,integer,unmapped,,,,No catalog match
+membership_roles,assigned_at_utc,datetime,unmapped,,,,No catalog match
+permissions,permission_code,text,unmapped,,,,No catalog match
+permissions,permission_category,text,unmapped,,,,No catalog match
+permissions,description,text,unmapped,,,,No catalog match
+permissions,created_at_utc,datetime,unmapped,,,,No catalog match
+queues,queue_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+queues,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+queues,queue_code,text,unmapped,,,,No catalog match
+queues,queue_name,text,unmapped,,,,No catalog match
+queues,service_code,text,unmapped,,,,No catalog match
+queues,channel_code,text,unmapped,,,,No catalog match
+queues,is_active,integer,unmapped,,,,No catalog match
+queues,created_at_utc,datetime,unmapped,,,,No catalog match
+queues,updated_at_utc,datetime,unmapped,,,,No catalog match
+role_permissions,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+role_permissions,role_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+role_permissions,permission_code,text,unmapped,,,,No catalog match
+role_permissions,granted_at_utc,datetime,unmapped,,,,No catalog match
+roles,role_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+roles,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+roles,role_code,text,unmapped,,,,No catalog match
+roles,role_name,text,unmapped,,,,No catalog match
+roles,role_description,text,unmapped,,,,No catalog match
+roles,is_system_role,integer,unmapped,,,,No catalog match
+roles,role_status,text,unmapped,,,,No catalog match
+roles,created_at_utc,datetime,unmapped,,,,No catalog match
+roles,updated_at_utc,datetime,unmapped,,,,No catalog match
+semantic_concepts,concept_key,text,unmapped,,,,No catalog match
+semantic_concepts,concept_version,integer,unmapped,,,,No catalog match
+semantic_concepts,display_name,text,unmapped,,,,No catalog match
+semantic_concepts,description,text,unmapped,,,,No catalog match
+semantic_concepts,aliases_json,text,unmapped,,,,No catalog match
+semantic_concepts,expected_types_json,text,unmapped,,,,No catalog match
+semantic_concepts,required_approval_fields_json,text,unmapped,,,,No catalog match
+semantic_concepts,concept_status,text,unmapped,,,,No catalog match
+semantic_concepts,created_at_utc,datetime,unmapped,,,,No catalog match
+services,service_code,text,unmapped,,,,No catalog match
+services,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+services,display_name,text,unmapped,,,,No catalog match
+services,is_active,integer,unmapped,,,,No catalog match
+services,created_at_utc,datetime,unmapped,,,,No catalog match
+services,updated_at_utc,datetime,unmapped,,,,No catalog match
+sla_rules,sla_rule_id,integer,unmapped,,,,No catalog match
+sla_rules,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+sla_rules,queue_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+sla_rules,market_code,text,unmapped,,,,No catalog match
+sla_rules,measurement_mode,text,unmapped,,,,No catalog match
+sla_rules,response_target_seconds,integer,unmapped,,,,No catalog match
+sla_rules,target_service_level_pct,number,suggested,service_level_pct,0.715,true,Partial token overlap (75%); review the meaning manually. | Observed type 'number' is compatible with the catalog expectation.
+sla_rules,short_abandon_seconds,integer,unmapped,,,,No catalog match
+sla_rules,exclude_short_abandons,integer,unmapped,,,,No catalog match
+sla_rules,effective_from_utc,datetime,unmapped,,,,No catalog match
+sla_rules,effective_to_utc,datetime,unmapped,,,,No catalog match
+sla_rules,definition_version,text,unmapped,,,,No catalog match
+sla_rules,created_at_utc,datetime,unmapped,,,,No catalog match
+sla_rules,updated_at_utc,datetime,unmapped,,,,No catalog match
+source_systems,source_system_id,integer,unmapped,,,,No catalog match
+source_systems,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+source_systems,source_code,text,unmapped,,,,No catalog match
+source_systems,display_name,text,unmapped,,,,No catalog match
+source_systems,source_type,text,unmapped,,,,No catalog match
+source_systems,source_status,text,unmapped,,,,No catalog match
+source_systems,created_at_utc,datetime,unmapped,,,,No catalog match
+source_systems,updated_at_utc,datetime,unmapped,,,,No catalog match
+tenant_invitations,invitation_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenant_invitations,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenant_invitations,email_normalized,text,unmapped,,,,No catalog match
+tenant_invitations,invitation_token_sha256,text,unmapped,,,,No catalog match
+tenant_invitations,invitation_status,text,unmapped,,,,No catalog match
+tenant_invitations,invited_by_membership_id,integer,unmapped,,,,No catalog match
+tenant_invitations,accepted_by_user_id,integer,unmapped,,,,No catalog match
+tenant_invitations,created_at_utc,datetime,unmapped,,,,No catalog match
+tenant_invitations,expires_at_utc,datetime,unmapped,,,,No catalog match
+tenant_invitations,accepted_at_utc,datetime,unmapped,,,,No catalog match
+tenant_memberships,membership_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenant_memberships,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenant_memberships,user_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenant_memberships,membership_status,text,unmapped,,,,No catalog match
+tenant_memberships,created_at_utc,datetime,unmapped,,,,No catalog match
+tenant_memberships,activated_at_utc,datetime,unmapped,,,,No catalog match
+tenant_memberships,updated_at_utc,datetime,unmapped,,,,No catalog match
+tenant_source_field_mappings,mapping_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenant_source_field_mappings,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenant_source_field_mappings,source_system_id,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,source_schema_name,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,source_table_name,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,source_column_name,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,mapping_version,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,mapping_status,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,suggested_concept_key,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,suggested_concept_version,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,selected_concept_key,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,selected_concept_version,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,fit_score,number,ambiguous,agent_quality_score,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'number' is compatible with the catalog expectation.
+tenant_source_field_mappings,type_compatible,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,candidate_details_json,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,review_evidence_json,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,rejection_reason,text,unmapped,,,,No catalog match
+tenant_source_field_mappings,created_by_membership_id,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,reviewed_by_membership_id,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,is_current,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,current_slot,integer,unmapped,,,,No catalog match
+tenant_source_field_mappings,created_at_utc,datetime,unmapped,,,,No catalog match
+tenant_source_field_mappings,reviewed_at_utc,datetime,unmapped,,,,No catalog match
+tenants,tenant_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+tenants,tenant_code,text,unmapped,,,,No catalog match
+tenants,display_name,text,unmapped,,,,No catalog match
+tenants,tenant_status,text,unmapped,,,,No catalog match
+tenants,created_at_utc,datetime,unmapped,,,,No catalog match
+tenants,updated_at_utc,datetime,unmapped,,,,No catalog match
+user_identities,user_identity_id,integer,unmapped,,,,No catalog match
+user_identities,user_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+user_identities,identity_provider_code,text,unmapped,,,,No catalog match
+user_identities,issuer_url,text,unmapped,,,,No catalog match
+user_identities,subject_id,text,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'text' is compatible with the catalog expectation.
+user_identities,provider_email_normalized,text,unmapped,,,,No catalog match
+user_identities,email_verified,integer,unmapped,,,,No catalog match
+user_identities,linked_at_utc,datetime,unmapped,,,,No catalog match
+user_identities,last_authenticated_at_utc,datetime,unmapped,,,,No catalog match
+users,user_id,integer,suggested,contact_reference,0.64,true,Partial token overlap (50%); review the meaning manually. | Observed type 'integer' is compatible with the catalog expectation.
+users,email_normalized,text,unmapped,,,,No catalog match
+users,display_name,text,unmapped,,,,No catalog match
+users,user_status,text,unmapped,,,,No catalog match
+users,created_at_utc,datetime,unmapped,,,,No catalog match
+users,updated_at_utc,datetime,unmapped,,,,No catalog match
