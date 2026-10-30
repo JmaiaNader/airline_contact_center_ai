@@ -81,3 +81,15 @@ def test_migration_warns_not_to_rerun_blindly():
     assert "not idempotent" in SQL
     assert "do not rerun blindly" in SQL
     assert "implicitly commits" in SQL
+
+
+
+def test_replacement_foreign_keys_use_distinct_names():
+    # The legacy constraints must be dropped, but replacements need new names.
+    assert "drop foreign key `fk_interactions_booking`" in SQL
+    assert "add constraint `fk_interactions_tenant_booking`" in SQL
+    assert "add constraint `fk_interactions_booking`" not in SQL
+
+    assert "drop foreign key `fk_sla_rules_queue`" in SQL
+    assert "add constraint `fk_sla_rules_tenant_queue`" in SQL
+    assert "add constraint `fk_sla_rules_queue`" not in SQL

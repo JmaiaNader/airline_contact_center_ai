@@ -123,7 +123,8 @@ ALTER TABLE `contact_interactions`
         FOREIGN KEY (`tenant_id`, `queue_id`, `channel_code`)
         REFERENCES `queues` (`tenant_id`, `queue_id`, `channel_code`)
         ON UPDATE RESTRICT ON DELETE RESTRICT,
-    ADD CONSTRAINT `fk_interactions_booking`
+    -- Use a distinct name: the legacy FK was dropped earlier in this ALTER TABLE.
+    ADD CONSTRAINT `fk_interactions_tenant_booking`
         FOREIGN KEY (`tenant_id`, `booking_id`)
         REFERENCES `bookings` (`tenant_id`, `booking_id`)
         ON UPDATE RESTRICT ON DELETE RESTRICT;
@@ -146,7 +147,8 @@ ALTER TABLE `sla_rules`
     ADD CONSTRAINT `fk_sla_rules_tenant`
         FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`tenant_id`)
         ON UPDATE RESTRICT ON DELETE RESTRICT,
-    ADD CONSTRAINT `fk_sla_rules_queue`
+    -- Use a distinct name: the legacy FK was dropped earlier in this ALTER TABLE.
+    ADD CONSTRAINT `fk_sla_rules_tenant_queue`
         FOREIGN KEY (`tenant_id`, `queue_id`)
         REFERENCES `queues` (`tenant_id`, `queue_id`)
         ON UPDATE RESTRICT ON DELETE RESTRICT;

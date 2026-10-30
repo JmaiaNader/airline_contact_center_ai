@@ -61,3 +61,14 @@ Run `database/checks/002_preflight.sql` and verify:
 - Production authentication, authorization, row-level security policy, or audit integration.
 
 These should be designed and tested in later stages. Do not represent Migration 002 as a complete multi-tenant security solution.
+
+## Foreign-key replacement naming correction
+
+The migration drops two legacy constraints while rebuilding tenant-scoped composite relationships:
+
+- `contact_interactions`: drops `fk_interactions_booking`, then creates the replacement as `fk_interactions_tenant_booking`.
+- `sla_rules`: drops `fk_sla_rules_queue`, then creates the replacement as `fk_sla_rules_tenant_queue`.
+
+Do not reuse the legacy constraint name for its replacement in the same `ALTER TABLE` statement. The replacement names are intentionally distinct to avoid MySQL error 1826 (duplicate foreign-key constraint name). The static migration test includes a regression check for both cases.
+
+The corrected canonical migration must still be tested from a clean restored schema. Do not execute this corrected migration on a schema where the earlier draft and repair script have already been applied.
