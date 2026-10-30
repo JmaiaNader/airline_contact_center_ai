@@ -1,5 +1,6 @@
-# Python 3.12 baseline. Add dependencies only when a module is implemented.
-streamlit>=1.40,<2
+# Python 3.12 baseline. Streamlit's auth extra installs Authlib for OIDC.
+streamlit[auth]>=1.45,<2
+Authlib>=1.3.2,<2
 python-dotenv>=1.0,<2
 pydantic-settings>=2.5,<3
 pytest>=8,<9

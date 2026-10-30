@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import streamlit as st
 
+from app.authentication import require_authenticated_tenant_context
 from src.config.settings import get_settings
 
 settings = get_settings()
-
 st.set_page_config(
     page_title=settings.app_name,
     page_icon="✈️",
@@ -13,30 +20,35 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("✈️ Airline Contact Center AI Platform")
-st.caption("Project foundation · Local-first · Modular monolith")
+tenant_context = require_authenticated_tenant_context()
 
-st.info(
-    "The foundation is running. No database connection or schema mutation is "
-    "performed by this page. We will add those in a separate, tested step."
+st.title("✈️ AeroInsight — Evidence & Decision Engine")
+st.caption("Multi-company analytics · Verified identity · Evidence-led decisions")
+st.success(
+    f"Welcome, {tenant_context.display_name}. "
+    f"Active company: {tenant_context.tenant_display_name}."
 )
+if "company_admin" in tenant_context.role_codes:
+    st.info("Company Admin access is active for this company.")
 
 left, right = st.columns(2)
 with left:
-    st.subheader("Platform modules")
+    st.subheader("Engine workflow")
     st.markdown(
-        "- Executive Dashboard — planned\n"
-        "- Chat Assistant — planned\n"
-        "- Forecasting — planned\n"
-        "- Policy Search — planned"
+        "1. Discover source metadata\n"
+        "2. Map source fields to governed business concepts\n"
+        "3. Review and approve mappings\n"
+        "4. Build evidence-backed analytics"
     )
 with right:
-    st.subheader("Language boundaries")
-    st.markdown(
-        "- **Employee language:** controls the assistant's answer language.\n"
-        "- **Service language:** describes the passenger/contact/queue context.\n"
-        "- **Policy document language:** records the source language of a policy."
-    )
+    st.subheader("Current access")
+    st.write({
+        "tenant": tenant_context.tenant_code,
+        "roles": sorted(tenant_context.role_codes),
+        "mapping_view": tenant_context.has_permission("mapping.view"),
+        "mapping_review": tenant_context.has_permission("mapping.review"),
+        "mapping_approve": tenant_context.has_permission("mapping.approve"),
+    })
 
 st.divider()
-st.caption(f"Environment: {settings.app_env} · Configuration loaded without exposing secrets")
+st.caption(f"Environment: {settings.app_env} · Database: {settings.db_name} · DB timestamps: UTC")

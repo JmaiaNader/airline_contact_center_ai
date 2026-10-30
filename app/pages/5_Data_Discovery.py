@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-# Streamlit may execute a page with app/pages as its import root.
-# Add the repository root explicitly so the local `src` package is importable.
-from pathlib import Path
 import sys
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PROJECT_ROOT_STR = str(PROJECT_ROOT)
-if PROJECT_ROOT_STR not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT_STR)
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import streamlit as st
 
+from app.authentication import require_authenticated_tenant_context
 from src.config.settings import get_settings
 from src.database.connection import create_db_engine
 from src.discovery.mysql_schema import inspect_database_schema
@@ -20,9 +18,14 @@ st.set_page_config(page_title="Data Discovery Engine", page_icon="🔎", layout=
 st.title("🔎 AeroInsight — Data Discovery Engine")
 st.caption("Stage 2 · Read-only MySQL schema discovery · Deterministic mapping suggestions")
 
+tenant_context = require_authenticated_tenant_context()
+if not tenant_context.has_permission("data_source.view"):
+    st.error("Your active company role does not grant data_source.view.")
+    st.stop()
+
 settings = get_settings()
 st.info(
-    f"This page inspects the configured MySQL schema `{settings.db_name}` metadata only. "
+    f"Company: `{tenant_context.tenant_code}`. This page inspects the configured MySQL schema `db_airlines` metadata only. "
     "It does not read customer/passenger rows, create tables, update data, or send data to an LLM."
 )
 
@@ -38,7 +41,7 @@ if st.button("Inspect database schema", type="primary"):
     engine = None
     try:
         engine = create_db_engine(settings)
-        with st.spinner(f"Reading schema metadata from {settings.db_name}..."):
+        with st.spinner("Reading schema metadata from db_airlines..."):
             profile = inspect_database_schema(
                 engine,
                 schema_name=settings.db_name,
@@ -47,10 +50,7 @@ if st.button("Inspect database schema", type="primary"):
         st.session_state["discovery_schema_profile"] = profile
         st.success("Schema metadata inspection completed.")
     except Exception as exc:  # Do not render connection strings or secret-bearing errors.
-        st.error(
-            f"Schema inspection failed ({type(exc).__name__}). "
-            "Check the local DB configuration and connectivity."
-        )
+        st.error(f"Schema inspection failed ({type(exc).__name__}). Check the local DB configuration and connectivity.")
     finally:
         if engine is not None:
             engine.dispose()
@@ -62,10 +62,7 @@ if profile is not None:
     c1, c2, c3 = st.columns(3)
     c1.metric("Tables discovered", profile.table_count)
     c2.metric("Columns discovered", profile.column_count)
-    c3.metric(
-        "Tenant-scoped tables",
-        sum(1 for table in profile.tables if table.has_tenant_id),
-    )
+    c3.metric("Tenant-scoped tables", sum(1 for table in profile.tables if table.has_tenant_id))
 
     rows: list[dict[str, object]] = []
     for table in profile.tables:
@@ -90,9 +87,7 @@ if profile is not None:
             )
 
     st.subheader("Column-level semantic suggestions")
-    st.caption(
-        "Suggestions only. Scores are heuristic rankings and must not be treated as confidence probabilities."
-    )
+    st.caption("Suggestions only. Scores are heuristic rankings and must not be treated as confidence probabilities.")
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
     st.subheader("Table details")
