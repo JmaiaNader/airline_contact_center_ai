@@ -162,3 +162,100 @@ def test_assessment_payload_preserves_human_approval_boundary():
     assert payload["requires_human_approval"] is True
     assert payload["candidates"][0]["concept_key"] == "customer_satisfaction_score"
     assert payload["candidates"][0]["type_compatible"] is True
+
+
+class _FakeMappingResult:
+    def __init__(self, *, tuple_row=None, mapping_row=None):
+        self.tuple_row = tuple_row
+        self.mapping_row = mapping_row
+
+    def first(self):
+        return self.tuple_row
+
+    def mappings(self):
+        return self
+
+    def one_or_none(self):
+        return self.mapping_row
+
+    def one(self):
+        if self.mapping_row is None:
+            raise AssertionError("Expected one mapping row")
+        return self.mapping_row
+
+
+class _FakeMappingConnection:
+    def __init__(self):
+        self.statements = []
+
+    def execute(self, statement, params=None):
+        sql = str(statement)
+        self.statements.append((sql, params or {}))
+        if "SELECT source_system_id" in sql and "FROM source_systems" in sql:
+            # The source lookup intentionally uses .first(); this path only checks existence.
+            return _FakeMappingResult(tuple_row=(5,))
+        if "SELECT concept_version" in sql and "FROM semantic_concepts" in sql:
+            # SQLAlchemy .first() exposes a tuple-like Row; .mappings() exposes keys.
+            return _FakeMappingResult(
+                tuple_row=(3,), mapping_row={"concept_version": 3}
+            )
+        if "SELECT mapping_id, mapping_version" in sql:
+            return _FakeMappingResult(mapping_row=None)
+        if "SELECT COALESCE(MAX(mapping_version)" in sql:
+            return _FakeMappingResult(mapping_row={"max_version": 0})
+        return _FakeMappingResult()
+
+
+class _FakeBeginContext:
+    def __init__(self, connection):
+        self.connection = connection
+
+    def __enter__(self):
+        return self.connection
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+class _FakeMappingEngine:
+    def __init__(self):
+        self.connection = _FakeMappingConnection()
+
+    def begin(self):
+        return _FakeBeginContext(self.connection)
+
+
+def test_save_suggestions_reads_concept_version_as_mapping_row():
+    """Regression: SQLAlchemy Row from .first() is tuple-like, not string-keyed."""
+    candidate = SimpleNamespace(
+        concept_key="customer_satisfaction_score",
+        display_name="Customer satisfaction score",
+        fit_score=0.94,
+        type_compatible=True,
+        rationale=("Alias match",),
+    )
+    assessment = SimpleNamespace(
+        status="suggested",
+        source_field="survey_rating",
+        inferred_type="integer",
+        candidates=(candidate,),
+        limitations=("Confirm scale and population",),
+    )
+    column = SimpleNamespace(column_name="survey_rating", mapping=assessment)
+    table = SimpleNamespace(table_name="customer_feedback", columns=(column,))
+    profile = SimpleNamespace(schema_name="db_airlines", tables=(table,))
+
+    engine = _FakeMappingEngine()
+    repository = SemanticMappingRepository(engine)
+    summary = repository.save_suggestions(
+        _context(), tenant_id=3, source_system_id=5, profile=profile
+    )
+
+    assert summary.saved_count == 1
+    insert_calls = [
+        (sql, params)
+        for sql, params in engine.connection.statements
+        if "INSERT INTO tenant_source_field_mappings" in sql
+    ]
+    assert len(insert_calls) == 1
+    assert insert_calls[0][1]["suggested_concept_version"] == 3

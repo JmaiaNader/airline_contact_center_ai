@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Mapping
+from uuid import uuid4
 
-from sqlalchemy import Engine, text
+from sqlalchemy import Engine, bindparam, text
 
 from src.discovery.mysql_schema import DatabaseSchemaProfile
 from src.harness.auth_models import AuthenticatedTenantContext
@@ -81,6 +83,12 @@ def _assessment_payload(column: Any) -> dict[str, Any]:
         "source_field": assessment.source_field,
         "inferred_type": assessment.inferred_type,
         "requires_human_approval": True,
+        "source_metadata": {
+            "is_primary_key": bool(getattr(column, "is_primary_key", False)),
+            "is_indexed": bool(getattr(column, "is_indexed", False)),
+            "nullable": bool(getattr(column, "nullable", True)),
+            "foreign_key_targets": list(getattr(column, "foreign_key_targets", ()) or ()),
+        },
         "candidates": candidates,
         "limitations": list(assessment.limitations),
     }
@@ -109,6 +117,86 @@ def _validate_evidence(evidence: Mapping[str, Any], required_fields: list[str]) 
     if len(serialized.encode("utf-8")) > 8192:
         raise InvalidMappingReview("Review evidence exceeds the 8 KB limit.")
     return normalized
+
+
+_BULK_APPROVAL_MIN_FIT_SCORE = 0.90
+_MAX_BULK_APPROVAL_ITEMS = 100
+
+
+def _validate_bulk_mapping_ids(mapping_ids: Sequence[int]) -> list[int]:
+    """Validate a bounded, unique set of mapping IDs for one atomic bulk action."""
+    if isinstance(mapping_ids, (str, bytes)) or not isinstance(mapping_ids, Sequence):
+        raise InvalidMappingReview("Bulk mapping IDs must be a list or tuple of integers.")
+    ids = list(mapping_ids)
+    if not ids:
+        raise InvalidMappingReview("Select at least one mapping for bulk approval.")
+    if len(ids) > _MAX_BULK_APPROVAL_ITEMS:
+        raise InvalidMappingReview(
+            f"Bulk approval is limited to {_MAX_BULK_APPROVAL_ITEMS} mappings per transaction."
+        )
+    if any(isinstance(item, bool) or not isinstance(item, int) or item <= 0 for item in ids):
+        raise InvalidMappingReview("Every mapping ID must be a positive integer.")
+    if len(set(ids)) != len(ids):
+        raise InvalidMappingReview("Duplicate mapping IDs are not allowed in a bulk approval.")
+    return ids
+
+
+def is_bulk_approval_candidate(record: Mapping[str, Any], concept_key: str) -> bool:
+    """Return True only for an exact, type-compatible, unambiguous top candidate.
+
+    This is an eligibility filter, not an approval. The human reviewer must still
+    inspect the displayed fields, supply concept evidence, and explicitly submit
+    the group approval. Partial lexical matches and ambiguous suggestions remain
+    in the individual review queue.
+    """
+    if record.get("mapping_status") != "suggested":
+        return False
+    details = _json_value(record.get("candidate_details_json")) or {}
+    candidates = details.get("candidates", []) if isinstance(details, dict) else []
+    if not candidates or not isinstance(candidates, list):
+        return False
+    top = candidates[0]
+    if not isinstance(top, dict):
+        return False
+    if top.get("concept_key") != concept_key or top.get("type_compatible") is not True:
+        return False
+    try:
+        score = float(top.get("fit_score"))
+    except (TypeError, ValueError):
+        return False
+    if score < _BULK_APPROVAL_MIN_FIT_SCORE:
+        return False
+    rationale = top.get("rationale") or []
+    if not isinstance(rationale, (list, tuple)):
+        return False
+    exact_markers = (
+        "exactly matches the canonical concept key",
+        "exactly matches a governed alias",
+    )
+    return any(
+        any(marker in str(reason).lower() for marker in exact_markers)
+        for reason in rationale
+    )
+
+
+def is_safe_auto_approval_candidate(record: Mapping[str, Any], concept_key: str) -> bool:
+    """Strict, metadata-backed fast path for the source-local contact identifier only.
+
+    KPI concepts (CSAT, NPS, AHT, SLA, offered/handled counts) are deliberately
+    excluded because names cannot establish scales, denominators, formulas or grain.
+    Contact references qualify only when the source column is an actual primary key.
+    """
+    if concept_key != "contact_reference":
+        return False
+    if not is_bulk_approval_candidate(record, concept_key):
+        return False
+    details = _json_value(record.get("candidate_details_json")) or {}
+    metadata = details.get("source_metadata", {}) if isinstance(details, dict) else {}
+    return (
+        isinstance(metadata, dict)
+        and metadata.get("is_primary_key") is True
+        and metadata.get("nullable") is False
+    )
 
 
 def _insert_audit_event(
@@ -229,7 +317,7 @@ class SemanticMappingRepository:
                                 """
                             ),
                             {"concept_key": suggested_key},
-                        ).first()
+                        ).mappings().one_or_none()
                         if concept_row is not None:
                             suggested_version = int(concept_row["concept_version"])
                         fit_score = top["fit_score"]
@@ -241,7 +329,9 @@ class SemanticMappingRepository:
                     current = connection.execute(
                         text(
                             """
-                            SELECT mapping_id, mapping_version
+                            SELECT mapping_id, mapping_version, mapping_status,
+                                   suggested_concept_key, suggested_concept_version,
+                                   fit_score, type_compatible, candidate_details_json
                             FROM tenant_source_field_mappings
                             WHERE tenant_id = :tenant_id
                               AND source_system_id = :source_system_id
@@ -261,6 +351,28 @@ class SemanticMappingRepository:
                         },
                     ).mappings().one_or_none()
                     if current:
+                        current_payload = _json_value(current.get("candidate_details_json"))
+                        current_score = current.get("fit_score")
+                        score_matches = (
+                            fit_score is None and current_score is None
+                        ) or (
+                            fit_score is not None
+                            and current_score is not None
+                            and round(float(current_score), 3) == round(float(fit_score), 3)
+                        )
+                        current_is_identical = (
+                            current_payload == payload
+                            and current.get("suggested_concept_key") == suggested_key
+                            and current.get("suggested_concept_version") == suggested_version
+                            and score_matches
+                            and (None if current.get("type_compatible") is None else bool(current.get("type_compatible")))
+                                == type_compatible
+                        )
+                        # Repeated clicks must not create duplicate versions or reset an
+                        # already approved/rejected mapping when the discovered metadata is unchanged.
+                        if current_is_identical:
+                            saved_count += 1
+                            continue
                         next_version = int(current["mapping_version"]) + 1
                         connection.execute(
                             text(
@@ -386,6 +498,146 @@ class SemanticMappingRepository:
             item["review_evidence_json"] = _json_value(item.get("review_evidence_json"))
             results.append(item)
         return tuple(results)
+
+
+    def review_mappings_bulk(
+        self,
+        context: AuthenticatedTenantContext,
+        *,
+        source_system_id: int,
+        mapping_ids: Sequence[int],
+        selected_concept_key: str,
+        review_evidence: Mapping[str, Any],
+        review_mode: str = "explicit_human_bulk_approval",
+    ) -> dict[str, Any]:
+        """Approve an explicitly selected source group in one atomic transaction.
+
+        Eligibility is revalidated server-side for every row. Each mapping receives
+        its own reviewer/timestamp and audit event; any invalid item rolls back the
+        complete group. Shared evidence is stored per mapping and must be confirmed
+        by the reviewer as applicable to every selected field in the group.
+        """
+        ids = _validate_bulk_mapping_ids(mapping_ids)
+        if isinstance(source_system_id, bool) or not isinstance(source_system_id, int) or source_system_id <= 0:
+            raise InvalidMappingReview("source_system_id must be a positive integer.")
+        if not isinstance(selected_concept_key, str) or not selected_concept_key.strip() or len(selected_concept_key) > 100:
+            raise InvalidMappingReview("Select one valid semantic concept for the group.")
+        selected_concept_key = selected_concept_key.strip()
+
+        select_statement = text(
+            """
+            SELECT mapping_id, mapping_status, candidate_details_json
+            FROM tenant_source_field_mappings
+            WHERE tenant_id = :tenant_id
+              AND source_system_id = :source_system_id
+              AND mapping_id IN :mapping_ids
+              AND is_current = 1
+            ORDER BY mapping_id
+            FOR UPDATE
+            """
+        ).bindparams(bindparam("mapping_ids", expanding=True))
+
+        with self._engine.begin() as connection:
+            rows = connection.execute(
+                select_statement,
+                {
+                    "tenant_id": context.tenant_id,
+                    "source_system_id": source_system_id,
+                    "mapping_ids": ids,
+                },
+            ).mappings().all()
+            if len(rows) != len(ids):
+                raise MappingNotFound(
+                    "One or more selected mappings are missing, stale, or outside the active company."
+                )
+
+            concept = connection.execute(
+                text(
+                    """
+                    SELECT concept_version, required_approval_fields_json
+                    FROM semantic_concepts
+                    WHERE concept_key = :concept_key AND concept_status = 'active'
+                    ORDER BY concept_version DESC LIMIT 1
+                    """
+                ),
+                {"concept_key": selected_concept_key},
+            ).mappings().one_or_none()
+            if concept is None:
+                raise InvalidMappingReview("Selected semantic concept is not active.")
+            required_fields = _json_value(concept["required_approval_fields_json"]) or []
+            evidence = _validate_evidence(review_evidence or {}, list(required_fields))
+
+            # Validate the whole group before writing the first row.
+            for row in rows:
+                record = dict(row)
+                record["candidate_details_json"] = _json_value(record.get("candidate_details_json"))
+                if not is_bulk_approval_candidate(record, selected_concept_key):
+                    raise InvalidMappingReview(
+                        f"Mapping {int(row['mapping_id'])} is not eligible for bulk approval. "
+                        "Only exact, unambiguous, type-compatible matches can be bulk-approved."
+                    )
+
+            batch_reference = uuid4().hex
+            approved_ids: list[int] = []
+            for row in rows:
+                mapping_id = int(row["mapping_id"])
+                result = connection.execute(
+                    text(
+                        """
+                        UPDATE tenant_source_field_mappings
+                        SET mapping_status = 'approved',
+                            selected_concept_key = :concept_key,
+                            selected_concept_version = :concept_version,
+                            review_evidence_json = :evidence,
+                            reviewed_by_membership_id = :membership_id,
+                            reviewed_at_utc = CURRENT_TIMESTAMP(6),
+                            rejection_reason = NULL
+                        WHERE tenant_id = :tenant_id
+                          AND source_system_id = :source_system_id
+                          AND mapping_id = :mapping_id
+                          AND is_current = 1
+                          AND mapping_status = 'suggested'
+                        """
+                    ),
+                    {
+                        "concept_key": selected_concept_key,
+                        "concept_version": int(concept["concept_version"]),
+                        "evidence": json.dumps(evidence, ensure_ascii=False, separators=(",", ":")),
+                        "membership_id": context.membership_id,
+                        "tenant_id": context.tenant_id,
+                        "source_system_id": source_system_id,
+                        "mapping_id": mapping_id,
+                    },
+                )
+                if result.rowcount != 1:
+                    raise InvalidMappingReview(
+                        f"Mapping {mapping_id} changed during review; no mappings in this batch were committed."
+                    )
+                _insert_audit_event(
+                    connection,
+                    context,
+                    action_code="semantic_mapping.bulk_approved",
+                    target_reference=str(mapping_id),
+                    details={
+                        "batch_reference": batch_reference,
+                        "source_system_id": source_system_id,
+                        "mapping_id": mapping_id,
+                        "concept_key": selected_concept_key,
+                        "review_mode": review_mode,
+                        "shared_evidence_applied": True,
+                    },
+                )
+                approved_ids.append(mapping_id)
+
+        return {
+            "decision": "approve",
+            "tenant_id": context.tenant_id,
+            "source_system_id": source_system_id,
+            "concept_key": selected_concept_key,
+            "batch_reference": batch_reference,
+            "approved_count": len(approved_ids),
+            "mapping_ids": tuple(approved_ids),
+        }
 
     def review_mapping(
         self,
@@ -549,6 +801,108 @@ class SemanticMappingService:
     ) -> tuple[dict[str, Any], ...]:
         tenant_id = self._authorization.require_permission(context, "mapping.view")
         return self._repository.list_current_mappings(tenant_id, source_system_id)
+
+
+    def save_and_approve_safe_exact_matches(
+        self,
+        context: AuthenticatedTenantContext,
+        *,
+        source_system_id: int,
+        profile: DatabaseSchemaProfile,
+    ) -> dict[str, Any]:
+        """Persist the latest schema suggestions and approve the safe exact PK match.
+
+        This is the one-action workflow requested for the Company Admin. It requires
+        both review and approve permissions, persists every field suggestion, then
+        approves only exact, unambiguous, type-compatible `contact_reference` matches
+        whose source column is a non-null primary key. KPI/business mappings remain
+        pending for later governed definition; no KPI formula is inferred or approved.
+        """
+        tenant_id = self._authorization.require_permission(context, "mapping.review")
+        self._authorization.require_permission(context, "mapping.approve")
+        saved = self._repository.save_suggestions(
+            context,
+            tenant_id=tenant_id,
+            source_system_id=source_system_id,
+            profile=profile,
+        )
+        records = self._repository.list_current_mappings(tenant_id, source_system_id)
+        eligible = [
+            item for item in records
+            if is_safe_auto_approval_candidate(
+                item,
+                str(item.get("suggested_concept_key") or ""),
+            )
+        ]
+        approved_count = 0
+        approved_ids: list[int] = []
+        if eligible:
+            # Contact-reference evidence is specific to the governed identifier concept.
+            # Existing bulk repository API requires a shared evidence object per concept.
+            # The evidence text is source-table scoped and all selected fields are PKs.
+            shared_evidence = {
+                "business_definition": (
+                    "Governed Contact Reference: source-local identifier for a contact or interaction; "
+                    "approved by the authenticated Company Admin using the explicit exact-match action."
+                ),
+                "uniqueness_scope": (
+                    "Every selected source field is a non-null primary key in its own source table. "
+                    "Uniqueness is table-local; no cross-source or cross-tenant uniqueness is asserted."
+                ),
+                "privacy_review": True,
+                "approval_basis": "company_admin_explicit_bulk_exact_primary_key_approval",
+                "data_access_scope": "Metadata mapping only; no source values were read or authorized.",
+            }
+            # Fail closed if a future catalog change adds another required field.
+            required_fields = self._repository.get_concept_approval_fields("contact_reference")
+            missing = [field for field in required_fields if field not in shared_evidence]
+            if missing:
+                raise InvalidMappingReview(
+                    "Contact-reference approval policy needs an update for: " + ", ".join(missing)
+                )
+            ids = [int(item["mapping_id"]) for item in eligible]
+            result = self._repository.review_mappings_bulk(
+                context,
+                source_system_id=source_system_id,
+                mapping_ids=ids,
+                selected_concept_key="contact_reference",
+                review_evidence=shared_evidence,
+                review_mode="company_admin_one_click_exact_primary_key_approval",
+            )
+            approved_count = int(result["approved_count"])
+            approved_ids.extend(int(value) for value in result["mapping_ids"])
+        pending_count = sum(
+            1 for item in records
+            if item.get("mapping_status") in {"suggested", "ambiguous"}
+            and int(item["mapping_id"]) not in approved_ids
+        )
+        return {
+            "saved_count": int(saved.saved_count),
+            "approved_count": approved_count,
+            "approved_mapping_ids": tuple(approved_ids),
+            "pending_count": pending_count,
+            "source_system_id": source_system_id,
+            "tenant_id": tenant_id,
+        }
+
+    def review_mappings_bulk(
+        self,
+        context: AuthenticatedTenantContext,
+        *,
+        source_system_id: int,
+        mapping_ids: Sequence[int],
+        selected_concept_key: str,
+        review_evidence: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Require RBAC and delegate tenant/source-scoped bulk approval."""
+        self._authorization.require_permission(context, "mapping.approve")
+        return self._repository.review_mappings_bulk(
+            context,
+            source_system_id=source_system_id,
+            mapping_ids=mapping_ids,
+            selected_concept_key=selected_concept_key,
+            review_evidence=review_evidence,
+        )
 
     def review_mapping(
         self,
